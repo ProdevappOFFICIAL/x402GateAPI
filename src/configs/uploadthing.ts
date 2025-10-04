@@ -1,9 +1,7 @@
 import { createUploadthing, type FileRouter } from "uploadthing/server";
 import { UploadThingError } from "uploadthing/server";
 
-const f = createUploadthing({
-  token: process.env.UPLOADTHING_TOKEN,
-});
+const f = createUploadthing();
 
 // FileRouter for your app, can contain multiple FileRoutes
 export const ourFileRouter = {
@@ -17,21 +15,21 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ metadata, file }) => {
       // This code RUNS ON YOUR SERVER after upload
       console.log("Upload complete for userId:", metadata.userId);
-      console.log("file url", file.url);
-      
+      console.log("file url", file.appUrl);
+
       // Return data to send to client
-      return { uploadedBy: metadata.userId, url: file.url };
+      return { uploadedBy: metadata.userId, url: file.appUrl };
     }),
-    
+
   storeBanner: f({ image: { maxFileSize: "8MB", maxFileCount: 1 } })
     .middleware(async ({ req }) => {
       return { userId: "user" };
     })
     .onUploadComplete(async ({ metadata, file }) => {
       console.log("Banner upload complete for userId:", metadata.userId);
-      console.log("file url", file.url);
-      
-      return { uploadedBy: metadata.userId, url: file.url };
+      console.log("file url", file.appUrl);
+
+      return { uploadedBy: metadata.userId, url: file.appUrl };
     }),
 } satisfies FileRouter;
 
