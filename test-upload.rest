@@ -1,0 +1,47 @@
+# Upload Testing with UploadThing Integration
+
+### Variables
+@baseUrl = http://localhost:4000/v1
+@token = your_jwt_token_here
+
+### Upload Store Icon
+POST {{baseUrl}}/upload/store-icon
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data
+
+< ./path/to/your/icon.png
+
+### Upload Store Banner
+POST {{baseUrl}}/upload/store-banner
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data
+
+< ./path/to/your/banner.jpg
+
+### Create Store with Uploaded Images
+POST {{baseUrl}}/stores
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "storeName": "My Awesome Store",
+  "storeSlug": "my-awesome-store",
+  "storeIcon": "https://utfs.io/f/your-icon-key-here",
+  "storeBanner": "https://utfs.io/f/your-banner-key-here",
+  "description": "This is my awesome store with uploaded images"
+}
+
+### Update Store with New Images
+PUT {{baseUrl}}/stores/store-id-here
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Store Name",
+  "iconUrl": "https://utfs.io/f/new-icon-key-here",
+  "bannerUrl": "https://utfs.io/f/new-banner-key-here"
+}
+
+### Delete Uploaded File
+DELETE {{baseUrl}}/upload/file/file-key-here
+Authorization: Bearer {{token}}

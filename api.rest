@@ -1,31 +1,185 @@
-### GET
-// Get all the users
-GET http://localhost:4000/users
+@baseUrl = http://localhost:4000/v1
+@authToken = your_jwt_token_here
 
-### GET
-// Get single user by id
-GET http://localhost:4000/users/1
+### Health Check
+GET {{baseUrl}}/../health
 
-### POST
-// Create a new user
-POST http://localhost:4000/users
+###
+
+### Authentication & Wallet
+
+#### Connect Wallet
+POST {{baseUrl}}/auth/wallet/connect
 Content-Type: application/json
 
 {
-  "name": "john",
-  "email": "john@gmail.com"
+  "walletAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "signature": "sample_signature_here_would_be_much_longer_in_real_implementation",
+  "message": "Sign in to SolStore"
 }
 
-### PATCH
-// Update a user
-PATCH http://localhost:4000/users/1
+###
+
+#### Verify Token
+GET {{baseUrl}}/auth/verify
+Authorization: Bearer {{authToken}}
+
+###
+
+### Store Management
+
+#### Create Store
+POST {{baseUrl}}/stores
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "storeName": "CryptoArt Gallery",
+  "storeSlug": "cryptoart-gallery",
+  "storeIcon": "🎨",
+  "description": "Digital art and NFT marketplace for creators"
+}
+
+###
+
+#### Get User Stores
+GET {{baseUrl}}/stores
+Authorization: Bearer {{authToken}}
+
+###
+
+#### Get Store by Slug (Public)
+GET {{baseUrl}}/stores/cryptoart-gallery
+
+###
+
+#### Update Store
+PUT {{baseUrl}}/stores/store_id_here
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Updated Store Name",
+  "description": "Updated description",
+  "settings": {
+    "currency": "SOL",
+    "language": "English",
+    "timezone": "UTC",
+    "theme": "dark",
+    "notifications": {
+      "email": true,
+      "sms": false,
+      "push": true
+    }
+  }
+}
+
+###
+
+#### Delete Store
+DELETE {{baseUrl}}/stores/store_id_here
+Authorization: Bearer {{authToken}}
+
+###
+
+### Product Management
+
+#### Create Product
+POST {{baseUrl}}/stores/store_id_here/products
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Digital Art Collection #1",
+  "description": "Exclusive digital art pieces",
+  "price": 2.5,
+  "currency": "SOL",
+  "category": "Digital Art",
+  "stock": "unlimited",
+  "images": ["https://example.com/image1.jpg"],
+  "status": "active",
+  "metadata": {
+    "downloadUrl": "https://example.com/download/art1.zip",
+    "fileSize": "15MB",
+    "fileType": "ZIP"
+  }
+}
+
+###
+
+#### Get Store Products
+GET {{baseUrl}}/stores/store_id_here/products?page=1&limit=20&status=active
+
+###
+
+#### Get Single Product
+GET {{baseUrl}}/stores/store_id_here/products/product_id_here
+
+###
+
+#### Update Product
+PUT {{baseUrl}}/stores/store_id_here/products/product_id_here
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Updated Product Name",
+  "price": 3.0,
+  "status": "active"
+}
+
+###
+
+#### Delete Product
+DELETE {{baseUrl}}/stores/store_id_here/products/product_id_here
+Authorization: Bearer {{authToken}}
+
+###
+
+### Order Management
+
+#### Create Order
+POST {{baseUrl}}/stores/store_id_here/orders
 Content-Type: application/json
 
 {
-  "name": "newjohn",
-  "email": "john@gmail.com"
+  "productId": "product_id_here",
+  "quantity": 1,
+  "customerEmail": "customer@example.com",
+  "customerWallet": "FNqe4kqTJRXupcAhYXVNY9JjTZVZjBp6RezvxMrwQUR5",
+  "paymentMethod": "solana"
 }
 
-### DELETE
-// Delete a user
-DELETE http://localhost:4000/users/1
+###
+
+#### Get Store Orders
+GET {{baseUrl}}/stores/store_id_here/orders?page=1&limit=20&status=completed
+Authorization: Bearer {{authToken}}
+
+###
+
+#### Get Single Order
+GET {{baseUrl}}/stores/store_id_here/orders/order_id_here
+Authorization: Bearer {{authToken}}
+
+###
+
+#### Update Order Status
+PUT {{baseUrl}}/stores/store_id_here/orders/order_id_here
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "status": "completed",
+  "paymentTxHash": "5KJp7z8X9Y2A3B4C5D6E7F8G9H0I1J2K3L4M5N6O7P8Q9R0S1T2U3V4W5X6Y7Z8A9B0C1D2E3F4G5H"
+}
+
+###
+
+### Analytics
+
+#### Get Store Analytics
+GET {{baseUrl}}/stores/store_id_here/analytics?period=30d
+Authorization: Bearer {{authToken}}
+
+###

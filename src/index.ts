@@ -1,78 +1,77 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient()
-import express, { Request, Response } from 'express';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import dotenv from 'dotenv';
+
+import authRoutes from './routers/auth';
+import storeRoutes from './routers/stores';
+import productRoutes from './routers/products';
+import orderRoutes from './routers/orders';
+import analyticsRoutes from './routers/analytics';
+import uploadRoutes from './routers/upload';
+import { errorHandler } from './middleware/errorHandler';
+
+dotenv.config();
+
 const app = express();
-app.use(express.json());
 
-// 🏚️ Default Route
-// This is the Default Route of the API
-app.get('/', async (req: Request, res: Response) => {
-    res.json({ message: 'Hello from Express Prisma Boilerplate!' });
+// Security middleware
+app.use(helmet());
+app.use(cors());
+
+// Rate limiting
+/*
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
+});
+app.use(limiter);
+*/
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// API Routes
+app.use('/v1/auth', authRoutes);
+app.use('/v1/stores', storeRoutes);
+app.use('/v1/stores', productRoutes);
+app.use('/v1/stores', orderRoutes);
+app.use('/v1/stores', analyticsRoutes);
+app.use('/v1/upload', uploadRoutes);
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Create new user
-// This is the Route for creating a new user via POST Method
-app.post('/users', async (req: Request, res: Response) => {
-    //get name and email from the request body
-    const { name, email } = req.body;
-    const user = await prisma.user.create({ 
-        data: {
-            name: String(name),
-            email: String(email),
-            status: "active"
-        }
-    });
-    res.json({ message: "success", data: user });
+// Default route
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'SolStore API v1.0',
+    documentation: '/docs',
+    health: '/health'
+  });
 });
 
-// Get single user
-// This is the Route for getting a single user via GET Method
-app.get('/users/:id', async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const user = await prisma.user.findUnique({
-        where: {
-            id: Number(id)
-        }
-    });
-    res.json({ message: "success", data: user });
+// Error handling middleware (must be last)
+app.use(errorHandler);
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      code: 'NOT_FOUND',
+      message: 'Route not found'
+    }
+  });
 });
 
-// Get all users
-// This is the Route for getting all users via GET Method
-app.get('/users', async (req: Request, res: Response) => {
-    const users = await prisma.user.findMany();
-    res.json({ message: "success", data: users });
-});
+const PORT = process.env.PORT || 4000;
 
-// Update user with id
-// This is the Route for updating a user via Patch Method
-app.patch('/users/:id', async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { name, email } = req.body;
-    const user = await prisma.user.update({
-        where: {
-            id: Number(id)
-        },
-        data: {
-            name: String(name),
-            email: String(email)
-        }
-    });
-    res.json({ message: "success", data: user });
-});
-
-// Delete user with id
-// This is the Route for deleting a user via DELETE Method
-app.delete('/users/:id', async (req: Request, res: Response) => {
-    const { id } = req.params;
-    await prisma.user.delete({
-        where: {
-            id: Number(id)
-        }
-    });
-    res.json({ message: "success" });
-});
-
-app.listen(4000, () => {
-    console.log('Express server is running on port 4000');
+app.listen(PORT, () => {
+  console.log(`🚀 SolStore API server running on port ${PORT}`);
+  console.log(`📚 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
