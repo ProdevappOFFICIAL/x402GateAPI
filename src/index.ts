@@ -8,6 +8,7 @@ import authRoutes from './routers/auth';
 import storeRoutes from './routers/stores';
 import productRoutes from './routers/products';
 import orderRoutes from './routers/orders';
+import checkoutRoutes from './routers/checkout';
 import analyticsRoutes from './routers/analytics';
 import uploadRoutes from './routers/upload';
 import { errorHandler } from './middleware/errorHandler';
@@ -38,8 +39,12 @@ app.use('/v1/auth', authRoutes);
 app.use('/v1/stores', storeRoutes);
 app.use('/v1/stores', productRoutes);
 app.use('/v1/stores', orderRoutes);
+app.use('/v1/stores', checkoutRoutes);
 app.use('/v1/stores', analyticsRoutes);
 app.use('/v1/upload', uploadRoutes);
+app.use('/v1/stores', checkoutRoutes)
+
+
 
 // Health check
 app.get('/health', (req, res) => {

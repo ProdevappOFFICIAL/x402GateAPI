@@ -76,6 +76,7 @@ model Order {
   currency        String      @default("SOL") @db.VarChar(10)
   status          OrderStatus @default(PENDING)
   paymentTxHash   String?     @map("payment_tx_hash") @db.VarChar(88)
+  metadata        Json        @default("{}")
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
 
