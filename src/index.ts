@@ -19,7 +19,7 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({origin : 'https://web-store-mauve.vercel.app/, http://localhost:3000', credentials: true}));
 
 // Rate limiting
 /*
