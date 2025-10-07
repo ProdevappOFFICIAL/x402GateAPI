@@ -358,6 +358,45 @@ Authorization: Bearer <jwt_token>
 }
 ```
 
+#### Upload Product Images
+
+```http
+POST /v1/upload/product-images
+Content-Type: multipart/form-data
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+
+- `images`: File[] (up to 5 image files, max 8MB each)
+
+**Supported formats:** JPEG, PNG, GIF, WebP
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "files": [
+      {
+        "url": "https://utfs.io/f/abc123-def456-ghi789",
+        "key": "abc123-def456-ghi789",
+        "name": "product-image-1.jpg",
+        "size": 45678
+      },
+      {
+        "url": "https://utfs.io/f/xyz789-abc123-def456",
+        "key": "xyz789-abc123-def456",
+        "name": "product-image-2.png",
+        "size": 32145
+      }
+    ],
+    "count": 2
+  }
+}
+```
+
 #### Delete File
 
 ```http
@@ -382,8 +421,8 @@ Authorization: Bearer <jwt_token>
 {
   "success": false,
   "error": {
-    "code": "NO_FILE",
-    "message": "No file uploaded"
+    "code": "NO_FILES",
+    "message": "No files uploaded"
   }
 }
 ```
@@ -417,7 +456,7 @@ Authorization: Bearer <jwt_token>
   "currency": "SOL|USDC (default: SOL)",
   "category": "string (optional, max 100 chars)",
   "stock": "number|'unlimited' (optional)",
-  "images": ["string"] (optional, array of URLs),
+  "images": ["string"] (optional, array of UploadThing URLs from /upload/product-images),
   "status": "active|draft|inactive (default: active)",
   "metadata": {
     "downloadUrl": "string (optional)",
@@ -1027,7 +1066,16 @@ curl -X POST http://localhost:4000/v1/upload/store-icon \
   -F "icon=@path/to/icon.png"
 ```
 
-3. **Create Store**
+3. **Upload Product Images**
+
+```bash
+curl -X POST http://localhost:4000/v1/upload/product-images \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -F "images=@path/to/image1.jpg" \
+  -F "images=@path/to/image2.png"
+```
+
+4. **Create Store**
 
 ```bash
 curl -X POST http://localhost:4000/v1/stores \

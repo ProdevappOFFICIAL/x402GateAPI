@@ -2,7 +2,8 @@ import {
   PublicKey, 
   Transaction,
   SystemProgram,
-  LAMPORTS_PER_SOL
+  LAMPORTS_PER_SOL,
+  Keypair
 } from '@solana/web3.js';
 import { 
   getAssociatedTokenAddress,
@@ -270,7 +271,8 @@ export const createSimplePaymentURL = (
  * Generate a unique reference key for payment tracking
  */
 export const generateReference = (): PublicKey => {
-  return PublicKey.unique();
+  // Generate a truly random reference using Keypair
+  return Keypair.generate().publicKey;
 };
 
 /**

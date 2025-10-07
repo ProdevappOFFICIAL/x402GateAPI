@@ -123,6 +123,68 @@ router.post('/store-banner', authenticateToken, upload.single('banner'), async (
   }
 });
 
+// Upload product images
+router.post('/product-images', authenticateToken, upload.array('images', 5), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'NO_FILES',
+          message: 'No files uploaded'
+        }
+      });
+    }
+
+    const files = req.files as Express.Multer.File[];
+    
+    // Convert buffers to File objects for UploadThing
+    const uploadFiles = files.map(file => 
+      new File([file.buffer], file.originalname, {
+        type: file.mimetype,
+      })
+    );
+
+    const responses = await utapi.uploadFiles(uploadFiles);
+
+    // Check for any upload errors
+    const failedUploads = responses.filter(response => response.error);
+    if (failedUploads.length > 0) {
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'UPLOAD_FAILED',
+          message: `Failed to upload ${failedUploads.length} file(s)`
+        }
+      });
+    }
+
+    const uploadedFiles = responses.map(response => ({
+      url: response.data!.url,
+      key: response.data!.key,
+      name: response.data!.name,
+      size: response.data!.size
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        files: uploadedFiles,
+        count: uploadedFiles.length
+      }
+    });
+  } catch (error) {
+    console.error('Upload product images error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to upload product images'
+      }
+    });
+  }
+});
+
 // Delete file
 router.delete('/file/:fileKey', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {

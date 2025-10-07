@@ -9,7 +9,8 @@ import {
   toBigNumber,
   PaymentRequest 
 } from '../utils/solana';
-import { STORE_WALLET, SUPPORTED_TOKENS } from '../configs/solana';
+import { SUPPORTED_TOKENS } from '../configs/solana';
+import { getStoreWithOwnerWallet } from '../utils/storeWallet';
 import Joi from 'joi';
 
 const router = Router();
@@ -44,10 +45,8 @@ router.post('/:storeId/checkout', validate(checkoutSchema), async (req, res) => 
     const { storeId } = req.params;
     const { productId, quantity = 1, customerWallet, customerEmail, currency = 'SOL' } = req.body;
 
-    // Verify store exists
-    const store = await prisma.store.findUnique({
-      where: { id: storeId }
-    });
+    // Verify store exists and get owner's wallet
+    const store = await getStoreWithOwnerWallet(storeId);
 
     if (!store) {
       return res.status(404).json({
@@ -141,9 +140,12 @@ router.post('/:storeId/checkout', validate(checkoutSchema), async (req, res) => 
       return newOrder;
     });
 
+    // Get store owner's wallet address
+    const storeOwnerWallet = new PublicKey(store.owner.walletAddress);
+
     // Create Solana Pay payment request
     const paymentRequest: PaymentRequest = {
-      recipient: STORE_WALLET,
+      recipient: storeOwnerWallet,
       amount: toBigNumber(totalAmount),
       reference,
       label: store.name,
@@ -291,10 +293,25 @@ router.post('/:storeId/checkout/verify', validate(verifyPaymentSchema), async (r
       splToken = new PublicKey(tokenInfo.mint);
     }
 
+    // Get store owner's wallet for verification
+    const storeWithOwner = await getStoreWithOwnerWallet(storeId);
+
+    if (!storeWithOwner) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Store not found'
+        }
+      });
+    }
+
+    const storeOwnerWallet = new PublicKey(storeWithOwner.owner.walletAddress);
+
     const paymentStatus = await verifyPayment(
       reference,
       expectedAmount,
-      STORE_WALLET,
+      storeOwnerWallet,
       splToken
     );
 
