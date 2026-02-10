@@ -32,6 +32,7 @@
     "@solana/pay": "^0.2.6",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
+    "axios": "^1.13.5",
     "bcryptjs": "^2.4.3",
     "bignumber.js": "^9.3.1",
     "cors": "^2.8.5",
@@ -42,6 +43,7 @@
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
-    "uploadthing": "^7.7.4"
+    "uploadthing": "^7.7.4",
+    "x402-stacks": "^2.0.1"
   }
 }

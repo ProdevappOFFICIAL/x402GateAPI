@@ -5,7 +5,7 @@ import prisma from '../configs/database';
 export interface AuthRequest extends Request {
   user?: {
     id: string;
-    walletAddress: string;
+    walletAddress: string | null;
   };
 }
 
@@ -38,6 +38,16 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
         error: {
           code: 'UNAUTHORIZED',
           message: 'Invalid token - user not found'
+        }
+      });
+    }
+
+    if (!user.walletAddress) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'User has no wallet address'
         }
       });
     }
@@ -83,6 +93,16 @@ export const authenticateWallet = async (req: AuthRequest, res: Response, next: 
         error: {
           code: 'UNAUTHORIZED',
           message: 'Wallet not registered'
+        }
+      });
+    }
+
+    if (!user.walletAddress) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'User has no wallet address'
         }
       });
     }

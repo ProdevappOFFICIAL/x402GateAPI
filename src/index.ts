@@ -5,13 +5,10 @@ import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 
 import authRoutes from "./routers/auth";
-import storeRoutes from "./routers/stores";
-import productRoutes from "./routers/products";
-import orderRoutes from "./routers/orders";
-import checkoutRoutes from "./routers/checkout";
-import analyticsRoutes from "./routers/analytics";
-import uploadRoutes from "./routers/upload";
+import apiRoutes from "./routers/apis";
+import { handleWrapper } from "./handlers/wrapperHandler";
 import { errorHandler } from "./middleware/errorHandler";
+import prisma from "./configs/database";
 
 dotenv.config();
 
@@ -21,7 +18,7 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: ["https://web-store-mauve.vercel.app", "http://localhost:3000"],
+    origin: ["http://localhost:3000"],
     credentials: true,
   })
 );
@@ -41,14 +38,14 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // API Routes
+console.log('🔗 Mounting API routes...');
 app.use("/v1/auth", authRoutes);
-app.use("/v1/stores", storeRoutes);
-app.use("/v1/stores", productRoutes);
-app.use("/v1/stores", orderRoutes);
-app.use("/v1/stores", checkoutRoutes);
-app.use("/v1/stores", analyticsRoutes);
-app.use("/v1/upload", uploadRoutes);
-app.use("/v1/stores", checkoutRoutes);
+app.use("/v1/apis", apiRoutes);
+console.log('✅ API routes mounted successfully');
+
+// Wrapper handler (public endpoint for payment-gated API access)
+// Must be before error handler but after body parsing
+app.all("/w/:apiId/*", handleWrapper);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -58,7 +55,7 @@ app.get("/health", (req, res) => {
 // Default route
 app.get("/", (req, res) => {
   res.json({
-    message: "SolStore API v1.0",
+    message: "x402Gate API v1.0",
     documentation: "/docs",
     health: "/health",
   });
@@ -67,20 +64,59 @@ app.get("/", (req, res) => {
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-// 404 handler
-app.use("*", (req, res) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      code: "NOT_FOUND",
-      message: "Route not found",
-    },
-  });
-});
+
 
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 SolStore API server running on port ${PORT}`);
-  console.log(`📚 Environment: ${process.env.NODE_ENV || "development"}`);
-});
+// Database initialization
+async function initializeDatabase() {
+  try {
+    await prisma.$connect();
+    console.log("✅ Database connected successfully");
+    
+    // Test the connection
+    await prisma.$queryRaw`SELECT 1`;
+    console.log("✅ Database connection verified");
+  } catch (error) {
+    console.error("❌ Database connection failed:", error);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+async function gracefulShutdown() {
+  console.log("🔄 Shutting down gracefully...");
+  try {
+    await prisma.$disconnect();
+    console.log("✅ Database disconnected");
+    process.exit(0);
+  } catch (error) {
+    console.error("❌ Error during shutdown:", error);
+    process.exit(1);
+  }
+}
+
+// Handle shutdown signals
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
+
+// Start server
+async function startServer() {
+  try {
+    // Initialize database first
+    await initializeDatabase();
+    
+    // Start the server
+    app.listen(PORT, () => {
+      console.log(`🚀 x402Gate API server running on port ${PORT}`);
+      console.log(`📚 Environment: ${process.env.NODE_ENV || "development"}`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+      console.log(`📖 API docs: http://localhost:${PORT}/`);
+    });
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
+    process.exit(1);
+  }
+}
+
+startServer();

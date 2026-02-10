@@ -1,46 +1,39 @@
 import { Request, Response, NextFunction } from 'express';
-import Joi from 'joi';
+import { ObjectSchema } from 'joi';
 
-export const validate = (schema: Joi.ObjectSchema) => {
+/**
+ * Generic validation middleware factory
+ * Validates request body against a Joi schema
+ * 
+ * @param schema - Joi schema to validate against
+ * @returns Express middleware function
+ */
+export const validate = (schema: ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const { error } = schema.validate(req.body);
-    
+    const { error, value } = schema.validate(req.body, {
+      abortEarly: false, // Return all errors, not just the first one
+      stripUnknown: true, // Remove unknown fields
+      convert: true // Convert types (e.g., string to number)
+    });
+
     if (error) {
-      return res.status(422).json({
+      const errors = error.details.map(detail => ({
+        field: detail.path.join('.'),
+        message: detail.message
+      }));
+
+      return res.status(400).json({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Invalid request data',
-          details: error.details.map(detail => ({
-            field: detail.path.join('.'),
-            message: detail.message
-          }))
+          details: errors
         }
       });
     }
-    
-    next();
-  };
-};
 
-export const validateQuery = (schema: Joi.ObjectSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const { error } = schema.validate(req.query);
-    
-    if (error) {
-      return res.status(422).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid query parameters',
-          details: error.details.map(detail => ({
-            field: detail.path.join('.'),
-            message: detail.message
-          }))
-        }
-      });
-    }
-    
+    // Replace req.body with validated and sanitized value
+    req.body = value;
     next();
   };
 };
