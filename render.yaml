@@ -2,7 +2,7 @@ services:
   - type: web
     name: api-registry-backend
     env: node
-    buildCommand: yarn install --frozen-lockfile
+    buildCommand: yarn --frozen-lockfile install
     startCommand: npm start
     envVars:
       - key: NODE_VERSION

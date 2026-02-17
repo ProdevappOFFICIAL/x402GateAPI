@@ -17,7 +17,7 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: ["https://x402-gaurd-ehic.vercel.app/"],
+    origin: ["https://x402-gaurd.vercel.app/"],
     credentials: true,
   })
 );
