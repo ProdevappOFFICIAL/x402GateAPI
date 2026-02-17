@@ -15,12 +15,9 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
-app.use(
-  cors({
-    origin: ["https://x402-gaurd.vercel.app"],
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: 'https://x402-gaurd.vercel.app'
+}));
 
 // Rate limiting
 /*
