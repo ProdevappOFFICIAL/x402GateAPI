@@ -1,7 +1,7 @@
 {
   "name": "node-express-prisma-boilerplate",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "license": "MIT",
   "scripts": {
     "start": "node ./dist/index.js",
