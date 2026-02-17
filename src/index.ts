@@ -3,9 +3,8 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
-
-import authRoutes from "./routers/auth";
 import apiRoutes from "./routers/apis";
+import authRoutes from "./routers/auth";
 import { handleWrapper } from "./handlers/wrapperHandler";
 import { errorHandler } from "./middleware/errorHandler";
 import prisma from "./configs/database";
@@ -18,7 +17,7 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
+    origin: ["http://localhost:5173"],
     credentials: true,
   })
 );
@@ -38,10 +37,12 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // API Routes
-console.log('🔗 Mounting API routes...');
-app.use("/v1/auth", authRoutes);
+console.log('🔗 Mounting routes...');
 app.use("/v1/apis", apiRoutes);
-console.log('✅ API routes mounted successfully');
+app.use("/auth", authRoutes);
+console.log('✅ Routes mounted successfully');
+console.log('   - /v1/apis/* (API management)');
+console.log('   - /auth/* (Authentication)');
 
 // Wrapper handler (public endpoint for payment-gated API access)
 // Must be before error handler but after body parsing

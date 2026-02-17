@@ -1,34 +1,26 @@
 import Joi from 'joi';
 
 /**
- * Validation schema for wallet connection
- */
-export const walletConnectSchema = Joi.object({
-  walletAddress: Joi.string().required().messages({
-    'string.empty': 'Wallet address is required',
-    'any.required': 'Wallet address is required'
-  })
-});
-
-/**
  * Validation schema for user registration
  */
 export const registerSchema = Joi.object({
   email: Joi.string().email().required().messages({
     'string.email': 'Email must be a valid email address',
-    'string.empty': 'Email is required',
     'any.required': 'Email is required'
   }),
   
-  password: Joi.string().min(8).required().messages({
-    'string.min': 'Password must be at least 8 characters',
-    'string.empty': 'Password is required',
+  password: Joi.string().min(6).required().messages({
+    'string.min': 'Password must be at least 6 characters',
     'any.required': 'Password is required'
   }),
   
-  walletAddress: Joi.string().required().messages({
-    'string.empty': 'Wallet address is required',
+  walletAddress: Joi.string().required().pattern(/^S[A-Z0-9]{38,40}$/).messages({
+    'string.pattern.base': 'Wallet address must be a valid Stacks address starting with S',
     'any.required': 'Wallet address is required'
+  }),
+  
+  name: Joi.string().optional().max(255).messages({
+    'string.max': 'Name must not exceed 255 characters'
   })
 });
 
@@ -38,20 +30,40 @@ export const registerSchema = Joi.object({
 export const loginSchema = Joi.object({
   email: Joi.string().email().required().messages({
     'string.email': 'Email must be a valid email address',
-    'string.empty': 'Email is required',
     'any.required': 'Email is required'
   }),
   
   password: Joi.string().required().messages({
-    'string.empty': 'Password is required',
     'any.required': 'Password is required'
   }),
   
-  walletAddress: Joi.string().required().messages({
-    'string.empty': 'Wallet address is required',
+  walletAddress: Joi.string().required().pattern(/^S[A-Z0-9]{38,40}$/).messages({
+    'string.pattern.base': 'Wallet address must be a valid Stacks address starting with S',
     'any.required': 'Wallet address is required'
   })
 });
+
+/**
+ * Validation schema for wallet connection (wallet-only auth)
+ */
+export const walletConnectSchema = Joi.object({
+  walletAddress: Joi.string().required().pattern(/^S[A-Z0-9]{38,40}$/).messages({
+    'string.pattern.base': 'Wallet address must be a valid Stacks address starting with S',
+    'any.required': 'Wallet address is required'
+  }),
+  
+  signature: Joi.string().optional().messages({
+    'string.base': 'Signature must be a string'
+  }),
+  
+  message: Joi.string().optional().messages({
+    'string.base': 'Message must be a string'
+  })
+});
+
+/**
+ * Validation schema for wallet connection
+ */
 
 /**
  * Validation schema for API creation

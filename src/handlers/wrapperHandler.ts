@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import axios from 'axios';
 import prisma from '../configs/database';
+import { validateAgentSignature } from '../middleware/agentValidator';
+import { AuthRequest } from '../middleware/auth';
 
 /**
  * Wrapper Handler - Public endpoint for payment-gated API access
@@ -10,17 +12,21 @@ import prisma from '../configs/database';
  * 1. Extract apiId from URL
  * 2. Load API configuration
  * 3. Verify API exists and is active
- * 4. Apply x402-stacks payment middleware
- * 5. Log payment (with duplicate protection)
- * 6. Proxy request to original API
- * 7. Log request metrics
- * 8. Trigger flow engine
+ * 4. Validate agent signature (NEW)
+ * 5. Apply x402-stacks payment middleware
+ * 6. Log payment (with duplicate protection)
+ * 7. Proxy request to original API
+ * 8. Log request metrics
+ * 9. Trigger flow engine
  * 
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 6.1-6.5, 7.1-7.5, 9.1-9.5
  */
 
-export async function handleWrapper(req: Request, res: Response, next: NextFunction) {
+export async function handleWrapper(req: AuthRequest, res: Response, next: NextFunction) {
   const startTime = Date.now();
+  
+  // Extract API key ID if present (for usage tracking)
+  const apiKeyId = req.apiKey?.id;
   
   try {
     // ============================================
@@ -76,7 +82,27 @@ export async function handleWrapper(req: Request, res: Response, next: NextFunct
     console.log(`✅ API found: ${api.name} (${apiId}) - Price: ${api.pricePerRequest} STX`);
     
     // ============================================
-    // SUBTASK 4.2: x402-stacks payment middleware
+    // SUBTASK 4.2: Agent signature validation
+    // ============================================
+    
+    // Validate agent signature before payment
+    await new Promise<void>((resolve, reject) => {
+      validateAgentSignature(req, res, (err?: any) => {
+        if (err) reject(err);
+        else if (res.headersSent) reject(new Error('Validation failed'));
+        else resolve();
+      });
+    });
+    
+    // If validation failed, response was already sent
+    if (res.headersSent) {
+      return;
+    }
+    
+    console.log('✅ Agent validation passed, proceeding to payment verification');
+    
+    // ============================================
+    // SUBTASK 4.3: x402-stacks payment middleware
     // ============================================
     
     // Import x402-stacks dynamically
@@ -129,7 +155,7 @@ export async function handleWrapper(req: Request, res: Response, next: NextFunct
     console.log(`✅ Payment verified: ${payment.transaction} from ${payment.payer}`);
     
     // ============================================
-    // SUBTASK 4.3: Payment logging with duplicate protection
+    // SUBTASK 4.4: Payment logging with duplicate protection
     // ============================================
     
     try {
@@ -154,7 +180,7 @@ export async function handleWrapper(req: Request, res: Response, next: NextFunct
     }
     
     // ============================================
-    // SUBTASK 4.4: Proxy request to original API
+    // SUBTASK 4.5: Proxy request to original API
     // ============================================
     
     // Strip /w/:apiId from path and preserve remaining path
@@ -188,7 +214,7 @@ export async function handleWrapper(req: Request, res: Response, next: NextFunct
       console.log(`${success ? '✅' : '⚠️'} Proxy response: ${proxyResponse.status} ${proxyResponse.statusText} (${responseMs}ms)`);
       
       // ============================================
-      // SUBTASK 4.5: Request logging (async)
+      // SUBTASK 4.6: Request logging (async)
       // ============================================
       
       // Log asynchronously to avoid blocking response
@@ -204,34 +230,21 @@ export async function handleWrapper(req: Request, res: Response, next: NextFunct
         console.error('❌ Failed to log API request:', error.message);
       });
       
-      // ============================================
-      // SUBTASK 4.6: Trigger flow engine
-      // ============================================
-      
-      // Import and trigger flow engine (async, non-blocking)
-      import('../services/flowEngine').then(({ triggerFlowEngine }) => {
-        triggerFlowEngine({
-          apiId,
-          events: ['PAYMENT_SUCCESS', 'API_REQUEST'],
-          context: {
-            payment: {
-              amount: api.pricePerRequest,
-              payer: payment.payer
-            },
-            request: {
-              success,
-              responseMs
-            }
+      // Track API key usage if present
+      if (apiKeyId) {
+        prisma.apiKeyRequest.create({
+          data: {
+            apiKeyId,
+            apiId,
+            success
           }
         }).then(() => {
-          console.log(`⚙️ Flow engine triggered for API: ${api.name}`);
+          console.log(`🔑 API key usage tracked: ${apiKeyId}`);
         }).catch(error => {
-          console.error('❌ Flow engine error:', error.message);
+          console.error('❌ Failed to log API key usage:', error.message);
         });
-      }).catch(error => {
-        console.error('❌ Failed to load flow engine:', error.message);
-      });
-      
+      }
+   
       // Return proxied response
       res.status(proxyResponse.status)
         .set(proxyResponse.headers)
@@ -263,6 +276,21 @@ export async function handleWrapper(req: Request, res: Response, next: NextFunct
       }).catch(err => {
         console.error('❌ Failed to log failed request:', err.message);
       });
+      
+      // Track API key usage if present
+      if (apiKeyId) {
+        prisma.apiKeyRequest.create({
+          data: {
+            apiKeyId,
+            apiId,
+            success: false
+          }
+        }).then(() => {
+          console.log(`🔑 API key usage tracked (failed): ${apiKeyId}`);
+        }).catch(err => {
+          console.error('❌ Failed to log API key usage:', err.message);
+        });
+      }
       
       return res.status(502).json({
         success: false,

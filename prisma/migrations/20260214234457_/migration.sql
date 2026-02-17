@@ -11,6 +11,8 @@ CREATE TYPE "FlowNodeType" AS ENUM ('TRIGGER', 'CONDITION', 'ACTION', 'AI');
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "password" TEXT,
+    "walletAddress" TEXT,
     "name" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -25,6 +27,8 @@ CREATE TABLE "Api" (
     "originalUrl" TEXT NOT NULL,
     "wrapperUrl" TEXT NOT NULL,
     "pricePerRequest" DOUBLE PRECISION NOT NULL,
+    "minPrice" DOUBLE PRECISION DEFAULT 1,
+    "maxPrice" DOUBLE PRECISION DEFAULT 1000,
     "network" "Network" NOT NULL,
     "facilitatorUrl" TEXT NOT NULL,
     "stacksAddress" TEXT NOT NULL,
@@ -97,6 +101,9 @@ CREATE TABLE "AgentDecision" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_walletAddress_key" ON "User"("walletAddress");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Api_wrapperUrl_key" ON "Api"("wrapperUrl");

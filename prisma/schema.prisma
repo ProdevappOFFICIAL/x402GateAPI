@@ -43,6 +43,34 @@ model User {
 
   apis      Api[]
   flows     Flow[]
+  apiKeys   ApiKey[]
+}
+
+//////////////////////
+// API KEYS (Public Access)
+//////////////////////
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String
+  key         String   @unique
+  name        String?
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+  requests    ApiKeyRequest[]
+}
+
+model ApiKeyRequest {
+  id          String   @id @default(cuid())
+  apiKeyId    String
+  apiId       String
+  success     Boolean
+  createdAt   DateTime @default(now())
+
+  apiKey      ApiKey   @relation(fields: [apiKeyId], references: [id])
 }
 
 //////////////////////

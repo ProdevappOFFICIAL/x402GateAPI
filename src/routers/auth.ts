@@ -9,13 +9,7 @@ import { authenticateToken, AuthRequest } from '../middleware/auth';
 const router = Router();
 
 // Test endpoint to verify routing works
-router.get('/test', (req: Request, res: Response) => {
-  res.json({
-    success: true,
-    message: 'Auth router is working!',
-    timestamp: new Date().toISOString()
-  });
-});
+
 
 // Register user
 router.post('/register', validate(registerSchema), async (req: Request, res: Response) => {

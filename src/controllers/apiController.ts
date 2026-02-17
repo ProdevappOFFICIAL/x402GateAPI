@@ -492,3 +492,307 @@ export const getApiMetrics = async (req: AuthRequest, res: Response, next: NextF
     next(error);
   }
 };
+
+/**
+ * Generate a new API key WITHOUT authentication (public endpoint)
+ * Creates or finds user by wallet address, then generates API key
+ * Allows anyone to get an API key by providing their wallet address
+ */
+export const generateApiKeyPublic = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { walletAddress, name } = req.body;
+
+    // Validate wallet address is provided
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Wallet address is required'
+        }
+      });
+    }
+
+    // Find or create user with this wallet address
+    let user = await prisma.user.findUnique({
+      where: { walletAddress }
+    });
+
+    if (!user) {
+      // Create new user with wallet address
+      user = await prisma.user.create({
+        data: {
+          walletAddress,
+          email: `${walletAddress}@x402layer.temp`, // Temporary email
+          name: name || 'Anonymous User'
+        }
+      });
+      console.log(`✅ New user created for wallet: ${walletAddress}`);
+    }
+
+    // Generate a secure random API key
+    const crypto = require('crypto');
+    const key = `x402_${crypto.randomBytes(32).toString('hex')}`;
+
+    // Create API key record
+    const apiKey = await prisma.apiKey.create({
+      data: {
+        userId: user.id,
+        key,
+        name: name || 'Unnamed API Key',
+        isActive: true
+      }
+    });
+
+    console.log(`✅ API key generated for wallet ${walletAddress}: ${apiKey.name}`);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: apiKey.id,
+        key: apiKey.key,
+        name: apiKey.name,
+        walletAddress: user.walletAddress,
+        isActive: apiKey.isActive,
+        createdAt: apiKey.createdAt
+      },
+      message: 'Store this API key securely. It will not be shown again.'
+    });
+  } catch (error: any) {
+    console.error('❌ Error generating API key:', error.message);
+    
+    // Handle duplicate wallet address (shouldn't happen with findUnique, but just in case)
+    if (error.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        error: {
+          code: 'DUPLICATE_WALLET',
+          message: 'This wallet address is already registered'
+        }
+      });
+    }
+    
+    next(error);
+  }
+};
+
+/**
+ * Generate a new API key for the authenticated user (legacy endpoint)
+ * Allows third-party access with usage tracking
+ */
+export const generateApiKey = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'User authentication required'
+        }
+      });
+    }
+
+    const { name } = req.body;
+
+    // Generate a secure random API key
+    const crypto = require('crypto');
+    const key = `x402_${crypto.randomBytes(32).toString('hex')}`;
+
+    // Create API key record
+    const apiKey = await prisma.apiKey.create({
+      data: {
+        userId,
+        key,
+        name: name || 'Unnamed API Key',
+        isActive: true
+      }
+    });
+
+    console.log(`✅ API key generated for user ${userId}: ${apiKey.name}`);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: apiKey.id,
+        key: apiKey.key,
+        name: apiKey.name,
+        isActive: apiKey.isActive,
+        createdAt: apiKey.createdAt
+      },
+      message: 'Store this API key securely. It will not be shown again.'
+    });
+  } catch (error: any) {
+    console.error('❌ Error generating API key:', error.message);
+    next(error);
+  }
+};
+
+/**
+ * List all API keys for the authenticated user
+ */
+export const listApiKeys = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'User authentication required'
+        }
+      });
+    }
+
+    const apiKeys = await prisma.apiKey.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+        lastUsedAt: true,
+        createdAt: true,
+        key: true // Include key but we'll mask it
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: apiKeys.map((k: any) => ({
+        id: k.id,
+        name: k.name,
+        keyPreview: `${k.key.substring(0, 12)}...${k.key.substring(k.key.length - 4)}`,
+        isActive: k.isActive,
+        lastUsedAt: k.lastUsedAt,
+        createdAt: k.createdAt
+      }))
+    });
+  } catch (error: any) {
+    console.error('❌ Error listing API keys:', error.message);
+    next(error);
+  }
+};
+
+/**
+ * Revoke (deactivate) an API key
+ */
+export const revokeApiKey = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+    const { id } = req.params;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'User authentication required'
+        }
+      });
+    }
+
+    // Verify ownership
+    const apiKey = await prisma.apiKey.findFirst({
+      where: { id, userId }
+    });
+
+    if (!apiKey) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'API key not found'
+        }
+      });
+    }
+
+    // Deactivate the key
+    await prisma.apiKey.update({
+      where: { id },
+      data: { isActive: false }
+    });
+
+    console.log(`✅ API key revoked: ${apiKey.name} (${apiKey.id})`);
+
+    res.status(200).json({
+      success: true,
+      message: 'API key revoked successfully'
+    });
+  } catch (error: any) {
+    console.error('❌ Error revoking API key:', error.message);
+    next(error);
+  }
+};
+
+/**
+ * Get usage statistics for an API key
+ */
+export const getApiKeyUsage = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+    const { id } = req.params;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'User authentication required'
+        }
+      });
+    }
+
+    // Verify ownership
+    const apiKey = await prisma.apiKey.findFirst({
+      where: { id, userId }
+    });
+
+    if (!apiKey) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'API key not found'
+        }
+      });
+    }
+
+    // Get usage stats
+    const totalRequests = await prisma.apiKeyRequest.count({
+      where: { apiKeyId: id }
+    });
+
+    const successfulRequests = await prisma.apiKeyRequest.count({
+      where: { apiKeyId: id, success: true }
+    });
+
+    // Get requests by API
+    const requestsByApi = await prisma.apiKeyRequest.groupBy({
+      by: ['apiId'],
+      where: { apiKeyId: id },
+      _count: true
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        apiKeyId: id,
+        name: apiKey.name,
+        totalRequests,
+        successfulRequests,
+        failedRequests: totalRequests - successfulRequests,
+        lastUsedAt: apiKey.lastUsedAt,
+        requestsByApi: requestsByApi.map((r: any) => ({
+          apiId: r.apiId,
+          count: r._count
+        }))
+      }
+    });
+  } catch (error: any) {
+    console.error('❌ Error getting API key usage:', error.message);
+    next(error);
+  }
+};
