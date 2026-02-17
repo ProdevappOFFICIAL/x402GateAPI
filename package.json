@@ -8,6 +8,7 @@
     "dev": "nodemon ./src/index.ts",
     "dev:build": "node start-dev.js",
     "build": "tsc -p .",
+    "postinstall": "npm run build && npx prisma generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
