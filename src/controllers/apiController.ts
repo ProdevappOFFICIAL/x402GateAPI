@@ -60,7 +60,7 @@ export const createApi = async (req: AuthRequest, res: Response, next: NextFunct
     });
 
     // Generate wrapper URL using the auto-generated ID
-    const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
+    const baseUrl = 'https://x402-gaurd.vercel.app';
     const wrapperUrl = `${baseUrl}/w/${api.id}`;
 
     // Update the API record with the wrapper URL
